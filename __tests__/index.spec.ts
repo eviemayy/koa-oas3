@@ -83,11 +83,11 @@ describe('Koa Oas3', () => {
     const next = jest.fn();
     await mw(ctx, next);
     expect(ctx.oas!.request.query.limit).toBe(10);
-    expect(ctx.oas!.request.query.type).toEqual({color: 'red'});
-    expect(ctx.oas!.request.query.fields).toEqual(['name','age','breed']);
+    expect(ctx.oas!.request.query.type).toEqual({ color: 'red' });
+    expect(ctx.oas!.request.query.fields).toEqual(['name', 'age', 'breed']);
   });
 
-  test('It should parse out operationId for GET', async() => {
+  test('It should parse out operationId for GET', async () => {
     const ctx = createContext({
       url: '/pets?limit=10&type[color]=red&fields=name,age,breed',
       headers: {
@@ -100,7 +100,7 @@ describe('Koa Oas3', () => {
     expect(ctx.oas!.operationId).toEqual('listPets');
   });
 
-  test('It should parse out operationId for POST', async() => {
+  test('It should parse out operationId for POST', async () => {
     const ctx = createContext({
       url: '/pets',
       headers: {
@@ -119,7 +119,7 @@ describe('Koa Oas3', () => {
     expect(ctx.oas!.operationId).toEqual('createPets');
   });
 
-  test('It should parse out operationId for PUT', async() => {
+  test('It should parse out operationId for PUT', async () => {
     const ctx = createContext({
       url: '/pets',
       headers: {
@@ -135,32 +135,32 @@ describe('Koa Oas3', () => {
 
   describe('Throw ValidationError', () => {
     test('Is should throw ValidationError if validation failed for object type query params', () => {
-        const ctx = createContext({
-            url: '/pets?type[color]=grey',
-            headers: {
-              'accept': 'application/json'
-            },
-            method: 'GET'
-          });
-          const next = jest.fn();
-          return expect(mw(ctx, next)).rejects.toThrow();
+      const ctx = createContext({
+        url: '/pets?type[color]=grey',
+        headers: {
+          'accept': 'application/json'
+        },
+        method: 'GET'
+      });
+      const next = jest.fn();
+      return expect(mw(ctx, next)).rejects.toThrow();
     });
     test('It should throw ValidationError if validation failed', () => {
-        const ctx = createContext({
-          url: '/pets',
-          headers: {
-            'accept': 'application/json',
-            'content-type': 'application/json'
-          },
-          method: 'POST',
-          body: {
-            id: 1,
-            tag: 'tag'
-          }
-        });
-        const next = jest.fn();
-        return expect(mw(ctx, next)).rejects.toThrow();
+      const ctx = createContext({
+        url: '/pets',
+        headers: {
+          'accept': 'application/json',
+          'content-type': 'application/json'
+        },
+        method: 'POST',
+        body: {
+          id: 1,
+          tag: 'tag'
+        }
       });
+      const next = jest.fn();
+      return expect(mw(ctx, next)).rejects.toThrow();
+    });
   });
 
   test('Should custom error handler work', async () => {
@@ -422,5 +422,69 @@ describe('Koa Oas3 with ChowOptions', () => {
     console.log(`ctx.oas: ${JSON.stringify(ctx.oas)}`)
     expect(ctx.oas!.request.params.petId).toBe(pathParam);
   });
+
+})
+
+describe('Pass Regex Array as a validatePaths option', () => {
+  let mw: koa.Middleware;
+  const pathParam = 345;
+
+  beforeEach(async () => {
+    mw = await oas({
+      file: path.resolve('./__tests__/fixtures/pet-store.json'),
+      endpoint: '/openapi',
+      uiEndpoint: '/openapi.html',
+      validatePaths: [new RegExp(`pets(?!/${pathParam})`)],
+      validationOptions: { requestBodyAjvOptions: { allErrors: true } } as ChowOptions
+    });
+  })
+
+  test('should NOT validate paths specified that do not validate agaiinst the RegEx pattern', async () => {
+    const ctx = createContext({
+      url: `/pets/${pathParam}`,
+      headers: {
+        'accept': 'application/json'
+      },
+      method: 'GET'
+    });
+
+    mw = await oas({
+      file: path.resolve('./__tests__/fixtures/pet-store.json'),
+      endpoint: '/openapi',
+      uiEndpoint: '/openapi.html',
+      validatePaths: [new RegExp(`pets(?!/${pathParam})`)],
+      validationOptions: { requestBodyAjvOptions: { allErrors: true } } as ChowOptions
+    });
+
+    const next = jest.fn();
+    await mw(ctx, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(next).toHaveBeenCalledWith();
+  })
+
+  test('should validate paths specified in RegEx pattern', async () => {
+    const ctx = createContext({
+      url: `/pets/`,
+      headers: {
+        'accept': 'application/json'
+      },
+      method: 'GET'
+    });
+
+    mw = await oas({
+      file: path.resolve('./__tests__/fixtures/pet-store.json'),
+      endpoint: '/openapi',
+      uiEndpoint: '/openapi.html',
+      validatePaths: [new RegExp(`pets(?!/${pathParam})`)],
+      validationOptions: { requestBodyAjvOptions: { allErrors: true } } as ChowOptions
+    });
+
+    const next = jest.fn();
+    await mw(ctx, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(next).not.toHaveBeenCalledWith();
+  })
 
 })

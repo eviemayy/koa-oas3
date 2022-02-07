@@ -34,7 +34,7 @@ export interface Config {
    * Whitelist paths for request validation
    * default: ['/']
    */
-  validatePaths: string[];
+  validatePaths: Array<string> | Array<RegExp>;
   /**
    * Optional base path to swagger ui bundle
    */
@@ -42,7 +42,7 @@ export interface Config {
   /**
    * Optional custom error handler
    */
-  errorHandler: (error: Error, ctx: Context)=> void,
+  errorHandler: (error: Error, ctx: Context) => void,
   /**
    * Body handlers to different request content-types
    * default:
@@ -109,7 +109,7 @@ export function validateConfig(cfg: Partial<Config>): Config {
         },
         enableTypes: ['form']
       })
-    },
+    } as any,
     validationOptions: cfg.validationOptions,
     oasValidatorOptions: cfg.oasValidatorOptions
   };
